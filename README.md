@@ -1,6 +1,6 @@
 ![image](https://img.shields.io/pypi/v/aizoo.svg) ![image](https://img.shields.io/travis/Jie-Yuan/aizoo.svg) ![image](https://readthedocs.org/projects/aizoo/badge/?version=latest)
 
-<h1 align = "center">:rocket: aizoo :rocket:</h1>
+<h1 align = "center">🐎 aizoo 🐎</h1>
 
 ---
 # Install
