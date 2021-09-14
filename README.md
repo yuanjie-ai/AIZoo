@@ -3,11 +3,7 @@
 ---
 
 
-![image](https://img.shields.io/pypi/v/aizoo.svg)
-
-![image](https://img.shields.io/travis/Jie-Yuan/aizoo.svg)
-
-![image](https://readthedocs.org/projects/aizoo/badge/?version=latest)
+![image](https://img.shields.io/pypi/v/aizoo.svg) ![image](https://img.shields.io/travis/Jie-Yuan/aizoo.svg) ![image](https://readthedocs.org/projects/aizoo/badge/?version=latest)
 
 
 # Install
