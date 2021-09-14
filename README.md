@@ -19,3 +19,5 @@ https://travis-ci.com/Jie-Yuan/aizoo
 # Features
 ---
 * TODO
+
+封装 lazypredict

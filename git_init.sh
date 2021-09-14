@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 git init
-git add *
+git add * # add vsc
 git commit -m "init"
 
 git remote add origin git@github.com:Jie-Yuan/aizoo.git
