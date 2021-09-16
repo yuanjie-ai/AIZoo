@@ -38,5 +38,5 @@ opt.plot()
 # TODO
 
 ---
-[1]: ./tuner/search_space
+[1]: ./aizoo/tuner/search_space
 
