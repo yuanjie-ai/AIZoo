@@ -1,0 +1,60 @@
+# 参数空间
+
+objective: null
+boosting_type: gbdt
+importance_type: split
+max_depth: -1
+
+class_weight: null
+random_state: null
+silent: True
+n_jobs: -1
+
+subsample_freq: 0
+
+subsample_for_bin: 200000
+min_split_gain: 0
+
+min_child_weight: 0.001
+min_child_samples: 20
+
+n_estimators: 100
+
+num_leaves:
+    type: int
+    low: 2
+    high: 31
+    log: False
+
+#learning_rate: 0.1
+learning_rate:
+    type: float
+    low: 0.001
+    high: 0.1
+    step: 0.001
+
+subsample:
+    type: float
+    low: 0.3
+    high: 1
+    log: False
+
+colsample_bytree:
+    type: float
+    low: 0.3
+    high: 1
+    log: False
+
+reg_alpha:
+    type: float
+    low: 1.e-8
+    high: 10
+    log: True
+
+reg_lambda:
+    type: float
+    low: 1.e-8
+    high: 10
+    log: True
+
+

@@ -15,7 +15,7 @@ from sklearn.model_selection import ShuffleSplit, StratifiedKFold
 
 class OOF(object):
 
-    def __init__(self, params=None, **kwargs):
+    def __init__(self, params=None):
         self.params = params
 
     @abstractmethod
@@ -62,12 +62,14 @@ class OOF(object):
             self.oof_train_proba = self.oof_train_proba[:, 1]
             self.oof_test_proba = self.oof_test_proba[:, 1]
 
+        self.oof_train_test = np.r_[self.oof_train_proba, self.oof_test_proba]  # 方便后续stacking
+
         if feval is not None:
             self.oof_score = feval(y, self.oof_train_proba)
 
             print(f"\033[94mCV Sorce: {self.oof_score} ended at {time.ctime()}\033[0m\n")
 
-        self.oof_train_test = np.r_[self.oof_train_proba, self.oof_test_proba]  # 方便后续stacking
+            return self.oof_score
 
         if oof_file is not None:
             pd.DataFrame({'oof': self.oof_train_test}).to_csv(oof_file, index=False)

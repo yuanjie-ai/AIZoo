@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Project      : tql-Python.
+# @Project      : aizoo.
 # @File         : __init__.py
-# @Time         : 2020/9/4 11:13 上午
+# @Time         : 2021/9/15 上午10:10
 # @Author       : yuanjie
-# @Email        : yuanjie@xiaomi.com
+# @WeChat       : 313303303
 # @Software     : PyCharm
-# @Description  : 
+# @Description  :
 
 
