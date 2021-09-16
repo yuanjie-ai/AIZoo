@@ -17,9 +17,10 @@ optuna.logging.set_verbosity(optuna.logging.ERROR)
 
 
 class Tuner(object):
+    """https://github.com/optuna/optuna-examples"""
 
     def __init__(self, search_space, **kwargs):
-        """
+        """https://github.com/optuna/optuna-examples
 
         @param search_space: Union[str, dict]
         @param kwargs:

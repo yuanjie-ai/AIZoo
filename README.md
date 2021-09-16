@@ -23,18 +23,21 @@ TabNetClassifier().run(X, y, feval=roc_auc_score)
 ```
 
 ## Hyperparameter optimization
+[search_space.yaml][1]
 ```python
 from aizoo.tuner.optimizers import LGBOptimizer, F1Optimizer
 from sklearn.datasets import make_regression, make_classification
 
 X, y = make_classification(n_samples=1000)
-opt = LGBOptimizer('./tuner/search_space/lgb.yaml',  X, y)
+opt = LGBOptimizer('search_space.yaml',  X, y)
 best_params = opt.optimize(100)
 opt.plot()
 ```
 ![newplot](https://tva1.sinaimg.cn/large/008i3skNgy1guiih927a2j60rd0el75102.jpg)
 
 ---
-* TODO
+# TODO
 
-封装 lazypredict
+---
+[1]: ./tuner/search_space/lgb.yaml
+
