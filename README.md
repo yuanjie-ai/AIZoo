@@ -11,7 +11,7 @@ pip install aizoo -U
 # [Docs](https://jie-yuan.github.io/aizoo)
 
 # Usages
-## OOF Models
+## OOF models
 ```python
 from aizoo.tab.models import TabNetClassifier
 from sklearn.datasets import make_regression, make_classification
@@ -22,8 +22,7 @@ X, y = make_classification(n_samples=10000)
 TabNetClassifier().run(X, y, feval=roc_auc_score)
 ```
 
-## Hyperparameter optimization
-[search_space.yaml][1]
+## Hyperparameter optimization: [search_space][1]
 ```python
 from aizoo.tuner.optimizers import LGBOptimizer, F1Optimizer
 from sklearn.datasets import make_regression, make_classification
@@ -39,5 +38,5 @@ opt.plot()
 # TODO
 
 ---
-[1]: ./tuner/search_space/lgb.yaml
+[1]: ./tuner/search_space
 
