@@ -30,6 +30,7 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     description="ai tools",
+    long_description_content_type="text/markdown",
     entry_points={
         'console_scripts': [
             'aizoo=aizoo.cli:main',
@@ -45,6 +46,6 @@ setup(
 
     test_suite='tests',
     url='https://github.com/Jie-Yuan/aizoo',
-    version=version, # '0.0.0',
+    version=version,  # '0.0.0',
     zip_safe=False,
 )

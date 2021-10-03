@@ -9,7 +9,7 @@
 # @Description  :
 
 import optuna
-from optuna.samplers import TPESampler
+from optuna.samplers import TPESampler, CmaEsSampler
 
 from meutils.pipe import *
 
@@ -29,23 +29,44 @@ class Tuner(object):
         self.kwargs = kwargs
 
     @abstractmethod
-    def trainer(self, params, **kwargs):
-        raise NotImplementedError("overwrite objective!!!")
+    def objective(self, trial: optuna.trial.Trial):
+        """
+        X = ...
+        y = ...
+        feval = roc_auc_score
 
-    def _objective(self, trial: optuna.trial.Trial):
-        params = self.choice(self.search_space, trial)
-        return self.trainer(params, **self.kwargs)
+        class LGBOptimizer(Tuner):
+            def objective(self, trial: optuna.trial.Trial):
+                params = self.trial_choice(trial)
+                _ = LGBMClassifier(params).run(X, y, feval=feval)
+                return _
+        """
+
+        params = self.trial_choice(trial)
+
+        raise NotImplementedError("overwrite objective!!!")
 
     def optimize(self, trials=3,
                  direction='maximize',
-                 sampler=TPESampler(seed=222),
                  study_name='optimizer',
+                 sampler=TPESampler(seed=222),
                  pruner=None,
-                 gc_after_trial=False):
+                 gc_after_trial=False,
+                 storage="sqlite:///opt.db",
+                 load_if_exists=True
+                 ):
 
-        self.study = optuna.create_study(study_name=study_name, direction=direction, sampler=sampler, pruner=pruner)
+        self.study = optuna.create_study(
+            study_name=study_name,
+            direction=direction,
+            sampler=sampler,
+            pruner=pruner,
+            storage=storage.replace(storage, f'sqlite:///opt_{study_name}.db'),
+            load_if_exists=load_if_exists
+        )
+
         self.study.optimize(
-            self._objective,
+            self.objective,
             n_trials=trials,
             gc_after_trial=gc_after_trial,
             show_progress_bar=True
@@ -91,10 +112,9 @@ class Tuner(object):
         else:
             raise Exception('load params error')
 
-    @staticmethod
-    def choice(search_space: dict, trial: optuna.trial.Trial):
+    def trial_choice(self, trial: optuna.trial.Trial):
         params = {}
-        for k, v in search_space.items():
+        for k, v in self.search_space.items():
             if isinstance(v, dict):
                 v = v.copy()
                 suggest_type = v.pop('type') if 'type' in v else v.pop('suggest_type')

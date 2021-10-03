@@ -12,8 +12,8 @@
 from meutils.pipe import *
 from sklearn.metrics import *
 
-from aizoo.tuner.base import Tuner
-from aizoo.tab.models import LGBMClassifier
+from aizoo.tuner.base import optuna, Tuner
+from aizoo.tab.models import LGBMOOF
 
 
 class F1Optimizer(Tuner):
@@ -23,10 +23,12 @@ class F1Optimizer(Tuner):
         self.y = y
         self.y_pred = y_pred
 
-    def trainer(self, params, **kwargs):
-        y_pred_ = np.where(np.array(self.y_pred) > params['threshold'], 1, 0)
+    def objective(self, trial: optuna.trial.Trial):
+        params = self.trial_choice(trial)
 
+        y_pred_ = np.where(np.array(self.y_pred) > params['threshold'], 1, 0)
         return f1_score(self.y, y_pred_)
+
 
 class LGBOptimizer(Tuner):
 
@@ -36,10 +38,9 @@ class LGBOptimizer(Tuner):
         self.y = y
         self.feval = feval
 
-    def trainer(self, params, **kwargs):
-
-        _ = LGBMClassifier(params).run(self.X, self.y, feval=self.feval, **self.kwargs)
-
+    def objective(self, trial: optuna.trial.Trial, task='Classifier'):
+        params = self.trial_choice(trial)
+        _ = LGBMOOF(params, task=task).fit(self.X, self.y, feval=self.feval)
         return _
 
 
@@ -50,6 +51,13 @@ if __name__ == '__main__':
     # opt = F1Optimizer({'threshold': 0.1}, y, y_pred)
     opt = F1Optimizer("./search_space/f1.yaml", y, y_pred)
 
-    opt.optimize()
+    opt.optimize(
+        100,
+        direction='minimize',
+        study_name='test',
+        storage="sqlite:////Users/yuanjie/Desktop/Projects/Python/aizoo/aizoo/tuner/test.db",
+        load_if_exists=True  # cli --skip-if-exists
+    )
+    # optuna-dashboard sqlite:////Users/yuanjie/Desktop/Projects/Python/aizoo/aizoo/tuner/test.db
 
     print(opt.trials_dataframe)
