@@ -101,16 +101,14 @@ class OOF(object):
     def fit_predict(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
         raise NotImplementedError
 
+    @staticmethod
+    def _predict(estimator):
+        return estimator.predict_proba if hasattr(estimator, 'predict_proba') else estimator.predict
+
     def predict(self, X):
-        preds = []
 
-        for estimator in self._estimators:
-            if hasattr(estimator, 'predict_proba'):
-                preds.append(estimator.predict_proba(X))
-            else:
-                preds.append(estimator.predict(X))
-
-        return np.array(preds).mean(0)
+        func = lambda e: self._predict(e)(X)
+        return np.array(list(map(func, self._estimators))).mean(0)
 
     def fit(self, X, y, sample_weight=None, X_test=None, feval=None, cv=5, split_seed=777, oof_file=None):
 
@@ -121,10 +119,10 @@ class OOF(object):
 
         self.feature_importances_ = np.zeros((cv, X.shape[1]))
 
-        if self.task == 'Regressor':  # 目标值多于128个就认为是回归问题 len(set(y)) > 128
+        if self.task == 'Regressor':
             self.oof_train_proba = np.zeros(len(X))
             self.oof_test_proba = np.zeros(len(X_test))
-            _ = enumerate(ShuffleSplit(cv, random_state=split_seed).split(X, y))
+            _ = enumerate(ShuffleSplit(cv, random_state=split_seed).split(X, y))  # todo: 兼容时间序列
 
         elif self.task == 'Classifier':
             num_classes = len(set(y))
@@ -136,7 +134,7 @@ class OOF(object):
             raise ValueError("TaskTypeError⚠️")
 
         valid_metrics = []
-        for n_fold, (train_index, valid_index) in tqdm(_, desc='Train🔥'):
+        for n_fold, (train_index, valid_index) in tqdm(_, desc='Train 🐢'):
             print(f"\033[94mFold {n_fold + 1} started at {time.ctime()}\033[0m")
             X_train, y_train, w_train = X[train_index], y[train_index], sample_weight[train_index]
             X_valid, y_valid, w_valid = X[valid_index], y[valid_index], sample_weight[valid_index]
@@ -152,9 +150,9 @@ class OOF(object):
             self.feature_importances_[n_fold] = get_imp(self._estimators[-1], X_train, self._importance_type)
 
             if feval is not None:
-                if self.oof_test_proba.shape[1] == 2:  # todo: 目前不支持多分类
+                if self.oof_test_proba.shape[-1] == 2:  # todo: 目前不支持多分类
                     valid_metrics.append(feval(y_valid, valid_predict[:, 1]))  # 二分类
-                else:
+                elif self.oof_test_proba.ndim == 1:
                     valid_metrics.append(feval(y_valid, valid_predict))  # 回归
 
         if self.oof_test_proba.shape[1] == 2:
@@ -179,13 +177,13 @@ class OOF(object):
 
     @classmethod
     def opt_cv(cls, X, y, X_test=None, cv_list=range(3, 16), params=None, **run_kwargs):
-        """todo: 折数优化"""
+        """todo: 折数优化，看方差？"""
 
         scores = []
-        for cv in tqdm(cv_list, desc='opt cv🔥'):  # range(3, 16):
+        for cv in tqdm(cv_list, desc='opt cv 🐢'):  # range(3, 16):
             oof = cls(params)
-            oof.fit(X, y, X_test, **run_kwargs)
-            scores.append((oof.oof_score, cv, oof))
+            _ = oof.fit(X, y, X_test, **run_kwargs)
+            scores.append((_, cv, oof))
 
         return sorted(scores)[::-1]
 
@@ -203,8 +201,11 @@ class OOF(object):
         self.df_feature_importances = pd.DataFrame(_, columns=columns)
 
         plt.figure(figsize=(14, topk // 5) if figsize is None else figsize)
-        sns.barplot(x=columns[0], y=columns[1], data=self.df_feature_importances[:topk])
+        # sns.barplot(x=columns[0], y=columns[1], data=self.df_feature_importances[:topk])
+        sns.barplot(x=self.df_feature_importances[:topk][columns[0]], y=self.df_feature_importances[:topk][columns[1]])
+
         plt.title(f'Features {self._importance_type.title()} Importances')
         plt.tight_layout()
+
         if pic_name is not None:
             plt.savefig(f'importances_{self.oof_score}.png')

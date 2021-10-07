@@ -6,7 +6,7 @@
 # @Author       : yuanjie
 # @Email        : yuanjie@xiaomi.com
 # @Software     : PyCharm
-# @Description  : 
+# @Description  : TODO
 import pandas as pd
 from tqdm import tqdm
 from datetime import timedelta
@@ -54,7 +54,9 @@ class DateTimeFeats(object):
             print('infer_datetime_format: dateStr2date')
             ts = self.dateStr2date(s)
 
-        _ = ts.progress_map(lambda t: list(self._func(t, feats)))
+        _ = ts.progress_map(lambda t: list(self._func(t, feats))) # todo: apply expand
+
+
         df_ts = pd.DataFrame(_.tolist(), columns=feats).add_prefix(add_prefix)
         df_ts.insert(0, f'{s.name}2date', ts)
         return df_ts
