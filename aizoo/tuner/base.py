@@ -55,13 +55,25 @@ class Tuner(object):
                  storage="sqlite:///opt.db",
                  load_if_exists=True
                  ):
+        """
+
+        @param trials:
+        @param direction:
+        @param study_name:
+        @param sampler:
+        @param pruner:
+        @param gc_after_trial:
+        @param storage:
+        @param load_if_exists:
+        @return:
+        """
 
         self.study = optuna.create_study(
             study_name=study_name,
             direction=direction,
             sampler=sampler,
             pruner=pruner,
-            storage=storage.replace(storage, f'sqlite:///opt_{study_name}.db'),
+            storage=storage,
             load_if_exists=load_if_exists
         )
 

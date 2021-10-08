@@ -14,7 +14,7 @@ from aizoo.base import OOF
 
 class LGBMOOF(OOF):
 
-    def fit_predict(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
+    def _fit(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
         import lightgbm as lgb
 
         estimator = lgb.__getattribute__(f'LGBM{self.task}')()  # 实例
@@ -27,21 +27,13 @@ class LGBMOOF(OOF):
             verbose=100,
             early_stopping_rounds=100,
             sample_weight=w_train,
-            eval_sample_weight=[w_train, w_valid] # 与eval_set一致
+            eval_sample_weight=[w_train, w_valid]  # 与eval_set一致
         )
-
-        estimator.fit(
-            X_train, y_train,
-            **{**fit_params, **self.fit_params}  # fit_params
-        )
-
-        self._estimators.append(estimator)
-        predict = self._predict(estimator)
-        return map(predict, (X_valid, X_test))
+        return estimator, fit_params
 
 
 class XGBOOF(OOF):
-    def fit_predict(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
+    def _fit(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
         import xgboost as xgb
 
         estimator = xgb.__getattribute__(f'XGB{self.task}')()  # 实例
@@ -55,20 +47,12 @@ class XGBOOF(OOF):
             sample_weight=w_train,
             sample_weight_eval_set=[w_train, w_valid]  # 与eval_set一致
         )
-
-        estimator.fit(
-            X_train, y_train,
-            **{**fit_params, **self.fit_params}
-        )
-
-        self._estimators.append(estimator)
-        predict = self._predict(estimator)
-        return map(predict, (X_valid, X_test))
+        return estimator, fit_params
 
 
 class CatBoostOOF(OOF):
 
-    def fit_predict(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
+    def _fit(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
         import catboost as cab
         estimator = cab.__getattribute__(f'CatBoost{self.task}')()  # TODO: embedding_features
         estimator.set_params(**self.params)
@@ -83,19 +67,12 @@ class CatBoostOOF(OOF):
             plot=True,
         )
 
-        estimator.fit(
-            X_train, y_train,
-            **{**fit_params, **self.fit_params}
-        )
-        # evals_result = estimator.evals_result()
-        self._estimators.append(estimator)
-        predict = self._predict(estimator)
-        return map(predict, (X_valid, X_test))
+        return estimator, fit_params
 
 
 class TabNetOOF(OOF):
 
-    def fit_predict(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
+    def _fit(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
         if self.task == 'Regressor':  # tabnet 回归输入的不同
             y_train = y_train.reshape(-1, 1)
             y_valid = y_valid.reshape(-1, 1)
@@ -113,17 +90,7 @@ class TabNetOOF(OOF):
             patience=5
         )
 
-        estimator.fit(
-            X_train, y_train,
-            **{**fit_params, **self.fit_params}
-        )
-        self._estimators.append(estimator)
-        predict = self._predict(estimator)
-
-        if self.task == 'Regressor':
-            return predict(X_valid).reshape(-1), predict(X_test).reshape(-1)
-        else:
-            return map(predict, (X_valid, X_test))
+        return estimator, fit_params
 
 
 if __name__ == '__main__':

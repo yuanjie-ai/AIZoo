@@ -89,7 +89,7 @@ class OOF(object):
         @param weight_func:
         @param task: Classifier or Regressor
         """
-        self.task = task.title()
+        self.task = task
         self.params = params if params is not None else {}
         self.fit_params = fit_params if fit_params is not None else {}
 
@@ -98,23 +98,32 @@ class OOF(object):
         self.feature_importances_ = None
 
     @abstractmethod
-    def fit_predict(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
+    def _fit(self, X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test, **kwargs):
+        """
+            返回estimator fit_params, 返回estimator需要有fit，predict方法
+        """
         raise NotImplementedError
-
-    @staticmethod
-    def _predict(estimator):
-        return estimator.predict_proba if hasattr(estimator, 'predict_proba') else estimator.predict
 
     def predict(self, X):
 
-        func = lambda e: self._predict(e)(X)
+        func = lambda e: e.predict(X)
+
         return np.array(list(map(func, self._estimators))).mean(0)
 
-    def fit(self, X, y, sample_weight=None, X_test=None, feval=None, cv=5, split_seed=777, oof_file=None):
+    def fit(self, X, y, sample_weight=None, X_test=None, feval=None, cv=5, split_seed=777, target_index=None):
+        """
 
-        if sample_weight is None:
-            sample_weight = np.ones(len(X))
-
+        @param X:
+        @param y:
+        @param sample_weight:
+        @param X_test:
+        @param feval:
+        @param cv:
+        @param split_seed:
+        @param target_index:
+            固定目标域索引用于 valid
+        @return:
+        """
         X_test = X_test if X_test is not None else X[:66]
 
         self.feature_importances_ = np.zeros((cv, X.shape[1]))
@@ -136,14 +145,32 @@ class OOF(object):
         valid_metrics = []
         for n_fold, (train_index, valid_index) in tqdm(_, desc='Train 🐢'):
             print(f"\033[94mFold {n_fold + 1} started at {time.ctime()}\033[0m")
-            X_train, y_train, w_train = X[train_index], y[train_index], sample_weight[train_index]
-            X_valid, y_valid, w_valid = X[valid_index], y[valid_index], sample_weight[valid_index]
+
+            valid_index_ = valid_index.copy()
+            valid_index = self._target_index(target_index, valid_index)  # 固定验证集
+
+            X_train, y_train = X[train_index], y[train_index]
+            X_valid, y_valid = X[valid_index], y[valid_index]
+
+            if sample_weight is None:
+                w_train, w_valid = None, None
+            else:
+                w_train, w_valid = sample_weight[train_index], sample_weight[valid_index]
 
             ##############################################################
-            valid_predict, test_predict = self.fit_predict(X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test)
+            estimator, fit_params = self._fit(X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test)
+            estimator.fit(
+                X_train, y_train,
+                **{**fit_params, **self.fit_params}  # fit_params
+            )
+
+            self.set_estimator_predict(estimator)  # 设定predic方法
+            self._estimators.append(estimator)
+
+            valid_predict, test_predict = map(estimator.predict, (X[valid_index], X_test))
             ##############################################################
 
-            self.oof_train_proba[valid_index] = valid_predict
+            self.oof_train_proba[valid_index] = estimator.predict(X[valid_index_])  # 避免 X 预测值缺损
             self.oof_test_proba += test_predict / cv
 
             # 记录特征重要性
@@ -161,6 +188,8 @@ class OOF(object):
 
         self.oof_train_test = np.r_[self.oof_train_proba, self.oof_test_proba]  # 方便后续stacking
 
+        del X, X_test  # 释放内存
+
         if feval is not None:
             self.oof_score = feval(y, self.oof_train_proba)
 
@@ -172,20 +201,33 @@ class OOF(object):
 
             return self.oof_score
 
-        if oof_file is not None:
-            pd.DataFrame({'oof': self.oof_train_test}).to_csv(oof_file, index=False)
+    @staticmethod
+    def set_estimator_predict(estimator, reshape=False):
+        if hasattr(estimator, 'predict_proba'):
+            estimator.predict = estimator.predict_proba
 
-    @classmethod
-    def opt_cv(cls, X, y, X_test=None, cv_list=range(3, 16), params=None, **run_kwargs):
-        """todo: 折数优化，看方差？"""
+        if reshape and 'tabnet' in str(estimator):
+            estimator.predict = lambda X: estimator.predict(X).reshape(-1)  # NN回归会有尺寸不匹配问题
 
+        if not hasattr(estimator, 'predict'):
+            raise AttributeError('donot exist predict⚠️')
+
+    def _target_index(self, target_index, valid_index):
+        if target_index is not None:
+            valid_index = list(set(target_index) & set(valid_index))
+        return valid_index
+
+    def oof_result_save(self, oof_file):
+        pd.DataFrame({'oof': self.oof_train_test}).to_csv(oof_file, index=False)
+
+    def opt_cv(self, X, y, cv_choices=range(3, 16), **kwargs):
         scores = []
-        for cv in tqdm(cv_list, desc='opt cv 🐢'):  # range(3, 16):
-            oof = cls(params)
-            _ = oof.fit(X, y, X_test, **run_kwargs)
-            scores.append((_, cv, oof))
+        for cv in cv_choices | xtqdm('opt cv🐢'):
+            kwargs['cv'] = cv
+            score = self.fit(X, y, **kwargs)
+            scores.append((score, cv, oof))
 
-        return sorted(scores)[::-1]
+        return scores | xsort(True)
 
     def plot_feature_importances(self, feature_names=None, topk=20, figsize=None, pic_name=None):
         import seaborn as sns

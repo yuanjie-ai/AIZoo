@@ -14,6 +14,7 @@ from sklearn.metrics import *
 
 from aizoo.tuner.base import optuna, Tuner
 from aizoo.tab.models import LGBMOOF
+from aizoo.utils.check_utils import check_classification
 
 
 class F1Optimizer(Tuner):
@@ -32,15 +33,37 @@ class F1Optimizer(Tuner):
 
 class LGBOptimizer(Tuner):
 
-    def __init__(self, search_space, X, y, feval=roc_auc_score, **kwargs):
+    def __init__(self, search_space, X, y, feval, fit_params=None, oof_fit_params=None, **kwargs):
+        """
+
+        @param search_space:
+        @param X:
+        @param y:
+        @param feval:
+        @param fit_params: 原生fit参数
+        @param oof_fit_params: dict(sample_weight=None, X_test=None, feval=None, cv=5, split_seed=777, target_index=None)
+        @param kwargs:
+        """
         super().__init__(search_space, **kwargs)
+
         self.X = X
         self.y = y
         self.feval = feval
+        self.fit_params = fit_params
+        self.oof_fit_params = oof_fit_params if oof_fit_params is not None else {}
 
-    def objective(self, trial: optuna.trial.Trial, task='Classifier'):
+    def objective(self, trial: optuna.trial.Trial):
         params = self.trial_choice(trial)
-        _ = LGBMOOF(params, task=task).fit(self.X, self.y, feval=self.feval)
+
+        task = 'Classifier' if check_classification(self.y) else 'Regressor'
+
+        _ = (
+            LGBMOOF(params=params, fit_params=self.fit_params, task=task)
+                .fit(self.X, self.y, feval=self.feval, **oof_fit_params)
+        )
+
+        if _ is None:
+            raise ValueError("Target is None⚠️")
         return _
 
 
