@@ -59,7 +59,7 @@ class LGBOptimizer(Tuner):
 
         _ = (
             LGBMOOF(params=params, fit_params=self.fit_params, task=task)
-                .fit(self.X, self.y, feval=self.feval, **oof_fit_params)
+                .fit(self.X, self.y, feval=self.feval, **self.oof_fit_params)
         )
 
         if _ is None:
