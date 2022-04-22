@@ -63,7 +63,7 @@ class Tuner(object):
         @param sampler:
         @param pruner:
         @param gc_after_trial:
-        @param storage:
+        @param storage: storage='mysql://root:yuanjie@localhost:3306/opt'
         @param load_if_exists:
         @return:
         """
