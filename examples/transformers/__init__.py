@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 # @Project      : aizoo.
 # @File         : __init__.py
-# @Time         : 2021/9/13 上午9:31
+# @Time         : 2022/4/7 上午11:19
 # @Author       : yuanjie
 # @WeChat       : 313303303
 # @Software     : PyCharm
-# @Description  :
+# @Description  : https://github.com/hspuppy/hugbert
+
+

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Project      : aizoo.
-# @File         : __init__.py
-# @Time         : 2021/9/13 上午9:31
+# @File         : common
+# @Time         : 2022/4/1 下午5:22
 # @Author       : yuanjie
 # @WeChat       : 313303303
 # @Software     : PyCharm

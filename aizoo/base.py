@@ -146,16 +146,15 @@ class OOF(object):
         for n_fold, (train_index, valid_index) in tqdm(_, desc='Train 🐢'):
             print(f"\033[94mFold {n_fold + 1} started at {time.ctime()}\033[0m")
 
-            valid_index_ = valid_index.copy()
-            valid_index = self._target_index(target_index, valid_index)  # 固定验证集
+            valid_index_ = self._target_index(target_index, valid_index)  # 固定验证集, 用于早停 valid_index包含valid_index_
 
             X_train, y_train = X[train_index], y[train_index]
-            X_valid, y_valid = X[valid_index], y[valid_index]
+            X_valid, y_valid = X[valid_index_], y[valid_index_]
 
             if sample_weight is None:
                 w_train, w_valid = None, None
             else:
-                w_train, w_valid = sample_weight[train_index], sample_weight[valid_index]
+                w_train, w_valid = sample_weight[train_index], sample_weight[valid_index_]
 
             ##############################################################
             estimator, fit_params = self._fit(X_train, y_train, w_train, X_valid, y_valid, w_valid, X_test)
@@ -170,17 +169,20 @@ class OOF(object):
             valid_predict, test_predict = map(estimator.predict, (X[valid_index], X_test))
             ##############################################################
 
-            self.oof_train_proba[valid_index] = estimator.predict(X[valid_index_])  # 避免 X 预测值缺损
+            self.oof_train_proba[valid_index] = valid_predict
             self.oof_test_proba += test_predict / cv
 
             # 记录特征重要性
             self.feature_importances_[n_fold] = get_imp(self._estimators[-1], X_train, self._importance_type)
 
             if feval is not None:
-                if self.oof_test_proba.shape[-1] == 2:  # todo: 目前不支持多分类
-                    valid_metrics.append(feval(y_valid, valid_predict[:, 1]))  # 二分类
-                elif self.oof_test_proba.ndim == 1:
-                    valid_metrics.append(feval(y_valid, valid_predict))  # 回归
+                if self.oof_test_proba.shape[-1] == 2:  # 二分类
+                    s = feval(y_valid, self.oof_train_proba[valid_index_, 1])  # 计算固定索引的cv值
+                    valid_metrics.append(s)
+
+                elif self.oof_test_proba.ndim == 1:  # 回归
+                    s = feval(y_valid, self.oof_train_proba[valid_index_])
+                    valid_metrics.append(s)  # 回归
 
         if self.oof_test_proba.shape[1] == 2:
             self.oof_train_proba = self.oof_train_proba[:, 1]
@@ -191,7 +193,11 @@ class OOF(object):
         del X, X_test  # 释放内存
 
         if feval is not None:
-            self.oof_score = feval(y, self.oof_train_proba)
+            if target_index is None:
+                self.oof_score = feval(y, self.oof_train_proba)
+            else:
+                _idx = list(target_index)
+                self.oof_score = feval(y[_idx], self.oof_train_proba[_idx])  # 计算固定索引的cv值
 
             print("\n\033[94mScore Info:\033[0m")
             print(f"\033[94m     {cv:>2} CV: {self.oof_score:.6f}\033[0m")
@@ -202,15 +208,15 @@ class OOF(object):
             return self.oof_score
 
     @staticmethod
-    def set_estimator_predict(estimator, reshape=False):
+    def set_estimator_predict(estimator):
         if hasattr(estimator, 'predict_proba'):
             estimator.predict = estimator.predict_proba
 
-        if reshape and 'tabnet' in str(estimator):
+        if 'TabNetRegressor' in str(estimator):
             estimator.predict = lambda X: estimator.predict(X).reshape(-1)  # NN回归会有尺寸不匹配问题
 
         if not hasattr(estimator, 'predict'):
-            raise AttributeError('donot exist predict⚠️')
+            raise AttributeError("Don't exist predict⚠")
 
     def _target_index(self, target_index, valid_index):
         if target_index is not None:
@@ -225,7 +231,8 @@ class OOF(object):
         for cv in cv_choices | xtqdm('opt cv🐢'):
             kwargs['cv'] = cv
             score = self.fit(X, y, **kwargs)
-            scores.append((score, cv, oof))
+
+            scores.append((score, cv))
 
         return scores | xsort(True)
 
