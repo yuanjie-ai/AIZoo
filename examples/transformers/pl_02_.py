@@ -10,22 +10,16 @@
 
 import torch
 from torch import nn
-from torch.nn import functional as F
 
 from torchmetrics.functional import accuracy
 
-import transformers
-from transformers import AutoModel, AutoTokenizer, AutoConfig, AdamW
-from transformers import \
-    get_linear_schedule_with_warmup, \
-    get_cosine_schedule_with_warmup, \
-    get_constant_schedule_with_warmup, \
-    get_polynomial_decay_schedule_with_warmup
+from transformers import AutoModel, AutoTokenizer, AdamW, AutoModelForSequenceClassification
+from transformers import get_linear_schedule_with_warmup
 
 # ME
 from meutils.pipe import *
 from minidata import MODEL_HOME
-from aizoo.utils.torch_utils import TorchData, TorchModule
+from aizoo.torch_utils import TorchData, TorchModule
 
 # 常量
 RANDOM_SEED = 42

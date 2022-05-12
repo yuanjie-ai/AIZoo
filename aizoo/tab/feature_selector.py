@@ -20,14 +20,14 @@
 import scipy as sp
 
 from functools import partial
-from sklearn.utils import shuffle, check_random_state
+from sklearn.utils import check_random_state
 from sklearn.preprocessing import scale as zscore
 from sklearn.model_selection import train_test_split
 
 # ME
 from meutils.pipe import *
-from aizoo.utils.model_utils import get_imp
-from aizoo.utils.check_utils import check_classification
+from aizoo.model_utils import get_imp
+from aizoo.common import check_classification
 
 
 class SimpleFS(object):

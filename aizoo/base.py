@@ -13,7 +13,7 @@ from sklearn.model_selection import ShuffleSplit, StratifiedKFold, train_test_sp
 
 # ME
 from meutils.pipe import *
-from aizoo.utils.model_utils import get_imp
+from aizoo.model_utils import get_imp
 
 
 class AdversarialValidation(object):

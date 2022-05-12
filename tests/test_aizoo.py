@@ -6,8 +6,7 @@
 import unittest
 from click.testing import CliRunner
 
-from aizoo import aizoo
-from aizoo import cli
+from aizoo.clis import cli
 
 
 class TestAizoo(unittest.TestCase):

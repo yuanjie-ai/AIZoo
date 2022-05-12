@@ -7,11 +7,10 @@
 # @Email        : yuanjie@xiaomi.com
 # @Software     : PyCharm
 # @Description  : TODO
-import pandas as pd
-from tqdm import tqdm
+
 from datetime import timedelta
 
-tqdm.pandas()
+from meutils.pipe import *
 
 
 class DateTimeFeats(object):
@@ -47,15 +46,12 @@ class DateTimeFeats(object):
         feats = self.feats
 
         _dtype = s.dtypes.__str__()
-        if _dtype.__contains__('int') or _dtype.__contains__('float'):  # 时间戳 10位是秒 13位是毫秒
-            print("infer_datetime_format: timestamp2date")
+        if _dtype.__contains__('int') or _dtype.__contains__('float') and len(str(s[0])) >= 10:  # 时间戳 10位是秒 13位是毫秒
             ts = self.timestamp2date(s)
         else:
-            print('infer_datetime_format: dateStr2date')
             ts = self.dateStr2date(s)
 
-        _ = ts.progress_map(lambda t: list(self._func(t, feats))) # todo: apply expand
-
+        _ = ts.progress_map(lambda t: list(self._func(t, feats)))  # todo: apply expand
 
         df_ts = pd.DataFrame(_.tolist(), columns=feats).add_prefix(add_prefix)
         df_ts.insert(0, f'{s.name}2date', ts)

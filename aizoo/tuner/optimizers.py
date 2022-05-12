@@ -14,7 +14,7 @@ from sklearn.metrics import *
 
 from aizoo.tuner.base import optuna, Tuner
 from aizoo.tab.models import LGBMOOF
-from aizoo.utils.check_utils import check_classification
+from aizoo.common import check_classification
 
 
 class F1Optimizer(Tuner):
