@@ -31,4 +31,4 @@ if __name__ == '__main__':
     pattern = '食|餐|肉|饭|菜|面包|蛋糕'
     df.loc[(df.EVENT_NAME + df.CONTENT).str.contains(pattern), 'EVENT_TYPE'] = 1
 
-    submit(df, 'comp_5154', '7NmIt00rGF5vKGlt')
+    submit(df, '***', '***')
