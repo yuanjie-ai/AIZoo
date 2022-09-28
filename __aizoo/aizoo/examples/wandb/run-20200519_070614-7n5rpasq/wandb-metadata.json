@@ -1,0 +1,24 @@
+{
+    "root": "/Users/yuanjie/Desktop/Projects/Python/inn",
+    "program": "/Users/yuanjie/Desktop/Projects/Python/inn/Examples/wandb_example.py",
+    "git": {
+        "remote": "git@github.com:Jie-Yuan/inn.git",
+        "commit": "4336c13b8a4d2789696a22d1532aee544a8d69ec"
+    },
+    "email": "313303303@qq.com",
+    "codePath": "Examples/wandb_example.py",
+    "startedAt": "2020-05-19T07:06:14.761643",
+    "host": "yuanjie-Mac.local",
+    "username": "yuanjie",
+    "executable": "/Users/yuanjie/Desktop/intelpython3/bin/python",
+    "os": "Darwin-19.2.0-x86_64-i386-64bit",
+    "python": "3.6.8",
+    "cpu_count": 8,
+    "args": [],
+    "state": "finished",
+    "jobType": null,
+    "mode": "run",
+    "project": "inn-Examples",
+    "heartbeatAt": "2020-05-19T07:06:58.019212",
+    "exitcode": 0
+}

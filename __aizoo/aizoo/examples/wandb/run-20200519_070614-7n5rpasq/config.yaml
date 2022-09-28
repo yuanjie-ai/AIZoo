@@ -1,0 +1,36 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.8.29
+    code_path: code/Examples/wandb_example.py
+    framework: tensorflow
+    is_jupyter_run: false
+    magic:
+      enable: true
+    python_version: 3.6.8
+decay:
+  desc: null
+  value: 1.0e-06
+dropout:
+  desc: null
+  value: 0.2
+epochs:
+  desc: null
+  value: 8
+hidden_layer_size:
+  desc: null
+  value: 128
+layer_1_size:
+  desc: null
+  value: 16
+layer_2_size:
+  desc: null
+  value: 32
+learn_rate:
+  desc: null
+  value: 0.01
+momentum:
+  desc: null
+  value: 0.9

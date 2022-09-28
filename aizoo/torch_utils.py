@@ -12,7 +12,6 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from sklearn.model_selection import train_test_split as _train_test_split, StratifiedKFold, ShuffleSplit
 
@@ -20,50 +19,45 @@ from sklearn.model_selection import train_test_split as _train_test_split, Strat
 from meutils.pipe import *
 from aizoo.common import check_classification
 
-callbacks = [
-    ModelCheckpoint(monitor='val_loss', mode='min', verbose=True),
-    EarlyStopping(monitor='val_loss', mode='min', verbose=True)
-]
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 class TorchModule(pl.LightningModule):
-    """
-    # 重写configure_optimizers()函数即可
-    # 设置优化器
-    def configure_optimizers(self):
-        weight_decay = 1e-6  # l2正则化系数
-        # 假如有两个网络，一个encoder一个decoder
-        optimizer = optim.Adam([{'encoder_params': self.encoder.parameters()}, {'decoder_params': self.decoder.parameters()}], lr=learning_rate, weight_decay=weight_decay)
-        # 同样，如果只有一个网络结构，就可以更直接了
-        optimizer = optim.Adam(my_model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        # 我这里设置2000个epoch后学习率变为原来的0.5，之后不再改变
-        StepLR = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2000], gamma=0.5)
-        optim_dict = {'optimizer': optimizer, 'lr_scheduler': StepLR}
-        return optim_dict
-    """
 
     # def __init__(self, *args: Any, **kwargs: Any) -> None:
     #     super().__init__(*args, **kwargs)
+
+    def predict4dataloader(self, dataloader: DataLoader, batch_hook=None):
+        """
+
+        @param dataloader:
+        @param batch_hook: 校验训练集与测试集，比如会多个 label，由 forward 决定
+        @return:
+        """
+
+        for batch in tqdm(dataloader):
+            if batch_hook:
+                batch = batch_hook(batch)
+            yield self.predict_proba(*batch)
 
     def predict(self, *arrays):
         return self.predict_proba(*arrays).argmax(-1)
 
     @torch.no_grad()
     def predict_proba(self, *arrays):  # 可以优化 model(torch.tensor(input_ids[:1]), torch.tensor(attention_masks[:1]))
-        # batch_size = 1024
-        # _ = TorchData(batch_size).from_cache(*arrays, False)
-        # return self.eval()(_).detach().softmax(-1)
+
         if self.training:
             self.train(False)
 
         return self(*array2tensor(arrays)).detach().softmax(-1)
 
-    @classmethod
-    def fit(cls, max_epochs,
+    def fit(self, max_epochs=1,
             train_dataloaders: DataLoader = None,
             val_dataloaders: DataLoader = None,
             gpus=0,
-            fast_dev_run=3,  # debug
+            fast_dev_run=True,  # debug
+            callbacks=None,
+            ckpt_path=None,
             trainer_kwargs=None,
             seed=42,
             *args: Any, **kwargs: Any):
@@ -78,19 +72,17 @@ class TorchModule(pl.LightningModule):
         @return:
         """
         pl.seed_everything(seed)
-        model = cls(*args, **kwargs)
 
         if trainer_kwargs is None:
-            trainer_kwargs = {}  # torch.cuda.is_available()
+            trainer_kwargs = {}
 
-        trainer = pl.Trainer(max_epochs=max_epochs, gpus=gpus, fast_dev_run=fast_dev_run, **trainer_kwargs)
-        trainer.fit(model, train_dataloaders, val_dataloaders)
-        return model
-
-    @classmethod
-    def summary(cls, *args, **kwargs):
-        from torchinfo import summary
-        return summary(cls(*args, **kwargs))
+        trainer = pl.Trainer(
+            max_epochs=max_epochs, gpus=gpus, fast_dev_run=fast_dev_run,
+            callbacks=callbacks,
+            **trainer_kwargs
+        )
+        trainer.fit(self, train_dataloaders, val_dataloaders, ckpt_path=ckpt_path)
+        return self
 
 
 class TorchData(object):
@@ -116,8 +108,20 @@ class TorchData(object):
         self.batch_size = batch_size
 
     def train_test_split(self, *arrays, test_size=0.2, random_state=42, stratify=None):
-        f"""{_train_test_split.__doc__}"""
-
+        """
+            data = tokenizer(df.review.tolist(), max_length=MAX_LENGTH, truncation=True, pad_to_max_length=True)
+            data['label'] = df.label
+            train_dataloader, test_dataloader = TorchData(batch_size=128).train_test_split(
+                data['input_ids'],
+                data['attention_mask'],
+                data['label']
+                )
+        @param arrays:
+        @param test_size:
+        @param random_state:
+        @param stratify:
+        @return:
+        """
         # todo支持时间序列数据
         _ = _train_test_split(*array2tensor(arrays),
                               test_size=test_size,
@@ -126,7 +130,7 @@ class TorchData(object):
 
         return self.from_cache(*_[::2]), self.from_cache(*_[1::2], is_train=False)
 
-    def from_cache(self, *inputs, is_train=True):
+    def from_cache(self, *inputs, is_train=True, device='cpu'):
         """出入参长度一致
 
             X = np.random.random((1000, 2))
@@ -138,7 +142,7 @@ class TorchData(object):
 
         # combine featues and labels of dataset
 
-        dataset = TensorDataset(*array2tensor(inputs))
+        dataset = TensorDataset(*array2tensor(inputs, device=device))
 
         # put dataset into DataLoader
         dataloader = DataLoader(
@@ -158,7 +162,7 @@ class TorchData(object):
         return torch.load(filename)
 
 
-def array2tensor(arrays) -> List[torch.Tensor]:
+def array2tensor(arrays, device='cpu') -> List[torch.Tensor]:
     data = []
     for a in arrays:
         assert isinstance(a, (list, pd.Series, np.ndarray, pd.DataFrame, torch.Tensor)), "`arrays` Data Type Error"
@@ -169,7 +173,7 @@ def array2tensor(arrays) -> List[torch.Tensor]:
         elif isinstance(a, (pd.Series, pd.DataFrame)):
             a = a.values.tolist()
 
-        data.append(torch.tensor(a))
+        data.append(torch.tensor(a, device=device))
 
     return data
 
@@ -206,7 +210,7 @@ if __name__ == '__main__':
 
     X, y = make_classification(20, n_features=5)
 
-    for train_dataloader, test_dataloader in tqdm(TorchData(8).oof_split(X, y)):
+    for train_dataloader, test_dataloader in tqdm(TorchData(8).train_test_split(X, y)):
         for i in train_dataloader:
             print(i)
         break

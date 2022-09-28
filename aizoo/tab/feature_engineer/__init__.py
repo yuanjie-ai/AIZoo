@@ -191,3 +191,5 @@ if __name__ == '__main__':
     print(df_.shape)
 
     print(df_.columns)
+
+    print(df_)

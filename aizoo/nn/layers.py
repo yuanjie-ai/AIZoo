@@ -13,9 +13,11 @@ from typing import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 """
 BN/LN https://www.zhihu.com/question/487766088
 """
+
 
 class FM(nn.Module):
     """Factorization Machine models pairwise (order-2) feature interactions
@@ -46,6 +48,7 @@ class FM(nn.Module):
 class DNN(nn.Module):
     """
     DNN(3)(torch.randn(10, 3))
+    https://blog.csdn.net/kkxi123456/article/details/118313680
     """
 
     def __init__(self, input_size,
@@ -54,7 +57,7 @@ class DNN(nn.Module):
                  ):
         super().__init__()
 
-        self.fcs = []
+        self.fcs = nn.ModuleList()
         for i, hidden_size in enumerate(hidden_units_list):
             fc = nn.Linear(input_size, hidden_size, bias=bias)
             self.fcs.append(fc)
@@ -64,36 +67,6 @@ class DNN(nn.Module):
     def forward(self, x):  # 开始计算的函数
 
         for fc in self.fcs:  # todo: add nn.BatchNorm1d nn.Dropout
-            out = fc(x)
-            x = out
-
-        return x
-
-
-class DNN(nn.Module):
-    """
-    DNN(3)(torch.randn(10, 3))
-    """
-
-    def __init__(self, input_size,
-                 hidden_units_list: List[int] = (64, 32, 16, 4),
-                 bias=True
-                 ):
-        super().__init__()
-
-        self.num_layer = len(hidden_units_list)
-
-        for i in range(self.num_layer):
-            hidden_size = hidden_units_list[i]
-            fc = nn.Linear(input_size, hidden_size, bias=bias)
-            self.__setattr__(f'fc_{i}', fc)
-
-            input_size = hidden_size  # 堆砌
-
-    def forward(self, x):  # 开始计算的函数
-
-        for i in range(self.num_layer):  # todo: add nn.BatchNorm1d nn.Dropout
-            fc = self.__getattr__(f'fc_{i}')
             out = fc(x)
             x = out
 
@@ -162,9 +135,5 @@ class DNN(nn.Module):
         return deep_input
 
 
-
-F.relu
-
-nn.ReLU
 if __name__ == '__main__':
     DNN()

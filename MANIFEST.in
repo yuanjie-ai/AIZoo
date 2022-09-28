@@ -11,3 +11,4 @@ recursive-exclude examples *
 recursive-exclude docs/resume *
 
 recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
+

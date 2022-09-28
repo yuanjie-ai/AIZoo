@@ -14,7 +14,6 @@ import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer, AdamW, AutoModelForSequenceClassification
 from transformers import get_linear_schedule_with_warmup
 
-from torchinfo import summary
 from torchmetrics.functional import accuracy
 
 # ME
@@ -47,8 +46,8 @@ class PL(TorchModule):
         _ = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask
-        )[0]
-        # logger.info(_.shape)
+        ).logits
+        # loss, logits = model(input_ids, attention_mask=attention_mask, labels=labels)
         return _
 
     def common_step(self, batch):
@@ -77,12 +76,37 @@ class PL(TorchModule):
         # Here we just reuse the validation_step for testing
         return self.validation_step(batch, batch_idx)
 
+    def predicts_step(self, batch, batch_idx, dataloader_idx=0):
+        print(batch_idx, dataloader_idx)
+        return self(batch[:2])
+
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=2e-5, correct_bias=False)
         lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=1000)
 
         return {'optimizer': optimizer, 'lr_scheduler': lr_scheduler}
 
+
+"""
+   from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+
+   callbacks = [
+       ModelCheckpoint(monitor='val_loss', mode='min', verbose=True),
+       EarlyStopping(monitor='val_loss', mode='min', verbose=True)
+   ]
+   # 重写configure_optimizers()函数即可
+   # 设置优化器
+   def configure_optimizers(self):
+       weight_decay = 1e-6  # l2正则化系数
+       # 假如有两个网络，一个encoder一个decoder
+       optimizer = optim.Adam([{'encoder_params': self.encoder.parameters()}, {'decoder_params': self.decoder.parameters()}], lr=learning_rate, weight_decay=weight_decay)
+       # 同样，如果只有一个网络结构，就可以更直接了
+       optimizer = optim.Adam(my_model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+       # 我这里设置2000个epoch后学习率变为原来的0.5，之后不再改变
+       StepLR = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2000], gamma=0.5)
+       optim_dict = {'optimizer': optimizer, 'lr_scheduler': StepLR}
+       return optim_dict
+"""
 
 if __name__ == '__main__':
     data = tokenizer(df.review.tolist(), max_length=MAX_LENGTH, truncation=True, pad_to_max_length=True)
@@ -91,6 +115,11 @@ if __name__ == '__main__':
         data['input_ids'],
         data['attention_mask'],
         data['label']
-        )
+    )
 
-    PL.fit(1, train_dataloader, test_dataloader)
+    pl_model = PL()
+    trainer = pl_model.fit(1, train_dataloader, test_dataloader)
+
+    trainer.predict(dataloaders=test_dataloader)
+
+    pl_model.predict_dataloader()
