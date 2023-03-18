@@ -6,11 +6,7 @@ __author__ = 'JieYuan'
 __mtime__ = '19-3-12'
 """
 
-from concurrent.futures import ThreadPoolExecutor
-
-import numpy as np
-import pandas as pd
-from tqdm import tqdm
+from meutils.pipe import *
 
 
 class InformationValue(object):
@@ -18,6 +14,7 @@ class InformationValue(object):
         小于0.02预测能力无
         大于0.30预测能力强
     """
+
     def __init__(self, df: pd.DataFrame, label: str):
         """
         :param df:
@@ -32,11 +29,11 @@ class InformationValue(object):
         self.y1 = self.df[label].values.sum()
         self.y0 = self.df['_label'].values.sum()
 
-    def iv(self, order=True, n_jobs=16):
-        with ThreadPoolExecutor(max_workers=n_jobs) as pool:
-            ivs = pool.map(self._iv, tqdm(self.feats, 'Calculating ...'), chunksize=1)
-        z = zip(ivs, self.feats)
-        return pd.DataFrame(sorted(z, reverse=True) if order else list(z), columns=['iv', 'feats'])
+    @property
+    def iv(self, ):
+        df = pd.DataFrame([(feat, self._iv(feat)) for feat in self.feats], columns=['iv', 'feats'])
+
+        return df.sort_values('feats', ascending=False, ignore_index=True)
 
     def _iv(self, feat):
         gr = self.df.groupby(feat)

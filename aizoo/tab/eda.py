@@ -7,7 +7,7 @@
 # @WeChat       : 313303303
 # @Software     : PyCharm
 # @Description  : 探索性数据分析（Exploratory Data Analysis，EDA）
-
+# https://github.com/samarth-agrawal-86/fast_ml/tree/master/fast_ml
 
 """https://www.cnblogs.com/HuZihu/p/11146493.html
 1. summary

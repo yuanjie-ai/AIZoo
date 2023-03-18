@@ -48,7 +48,7 @@ class SimpleFS(object):
         assert isinstance(exclude, list)
         assert isinstance(df, pd.DataFrame)
 
-        self.df = df
+        self.df = df.copy()
 
         exclude += df.select_dtypes(['datetime64[ns]', object]).columns.tolist()
         print(f"Exclude Fetures: {exclude}")
@@ -59,7 +59,7 @@ class SimpleFS(object):
             self.feats = df.columns.tolist()
 
     def run(self):
-        df = self.df.copy()
+        df = self.df
 
         with timer('干掉高缺失'):
             self.to_drop_dict['filter_missing'] = self.filter_missing()
@@ -86,19 +86,17 @@ class SimpleFS(object):
         print('%d features with greater than %0.2f missing values.' % (len(to_drop), threshold))
         return to_drop
 
-    def _filter_variance(self, feat, df):
-        var = df[feat][lambda x: x.between(x.quantile(0.005), x.quantile(0.995))].var()
-        return '' if var else feat
-
-    def filter_variance(self, feats=None, max_worker=4):
+    def filter_variance(self, feats=None, var_threshold=0):
         if feats is None:
             feats = self.feats
 
-        _filter_variance = partial(self._filter_variance, df=self.df)
-        with ProcessPoolExecutor(min(max_worker, len(feats))) as pool:
-            to_drop = pool.map(_filter_variance, tqdm(feats, 'Filter Variance ...'))
-            to_drop = [feat for feat in to_drop if feat]
-        print('%d features with 0 variance in 0.5 ~ 99.5 quantile.' % len(to_drop))
+        to_drop = []
+        for feat in tqdm(feats, 'Calculate variance'):
+            var = self.df[feat][lambda s: s.between(*s.quantile((0.005, 0.995)))].var()
+            if var <= var_threshold:
+                to_drop.append(feat)
+
+        print(f'{len(to_drop)} features with 0 variance in 0.5 ~ 99.5 quantile.')
         return to_drop
 
 

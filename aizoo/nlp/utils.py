@@ -11,9 +11,11 @@
 from meutils.pipe import *
 
 from LAC import LAC
+
+
 def get_nouns(texts):
     lac = LAC()
-    dic = {'NOUN':[], 'PER': [], 'LOC': [], 'ORG': [], 'TIME': []}
+    dic = {'NOUN': [], 'PER': [], 'LOC': [], 'ORG': [], 'TIME': []}
     for words, flags in lac.run(texts):
         for i, flag in enumerate(flags):
             if 'n' in flag:
@@ -22,3 +24,6 @@ def get_nouns(texts):
                 dic[flag].append(words[i])
 
     return dic
+
+
+import rocketqa

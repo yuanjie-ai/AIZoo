@@ -14,7 +14,9 @@ import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer, AdamW, AutoModelForSequenceClassification
 from transformers import get_linear_schedule_with_warmup
 
-from torchmetrics.functional import accuracy
+from torchmetrics.functional import accuracy, auc
+import torchmetrics
+
 
 # ME
 from meutils.pipe import *
@@ -31,16 +33,19 @@ PRE_TRAINED_MODEL_NAME = MODEL_HOME / 'ckiplab/albert-tiny-chinese'
 df = GoldenDataset('携程酒店评论').dataframe.dropna().reset_index(drop=1)
 
 tokenizer = AutoTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
-clf = AutoModelForSequenceClassification.from_pretrained(PRE_TRAINED_MODEL_NAME, num_labels=2)
+
+
+def get_model():
+    return AutoModelForSequenceClassification.from_pretrained(PRE_TRAINED_MODEL_NAME, num_labels=2)
 
 
 class PL(TorchModule):
 
-    def __init__(self, loss_fn=nn.CrossEntropyLoss()):
+    def __init__(self, model=get_model(), loss_fn=nn.CrossEntropyLoss()):
         super().__init__()
         self.loss_fn = loss_fn
         # Define PyTorch model
-        self.model = clf
+        self.model = model
 
     def forward(self, input_ids, attention_mask):
         _ = self.model(

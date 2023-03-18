@@ -9,3 +9,4 @@
 # @Description  :
 
 
+from aizoo.nlp.models.TfidfClassifier import TfidfClassifier

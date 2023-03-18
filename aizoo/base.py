@@ -9,11 +9,10 @@
 # @Description  : todo: 增加nn模型
 
 
-from sklearn.model_selection import ShuffleSplit, StratifiedKFold, train_test_split
-
 # ME
 from meutils.pipe import *
 from aizoo.model_utils import get_imp
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 
 
 class AdversarialValidation(object):
@@ -23,6 +22,7 @@ class AdversarialValidation(object):
 
     def __init__(self, params=None, importance_type='split', fit_params=None):
         self.params = params if params is not None else {}
+
         self.params['metric'] = 'auc'
 
         self._importance_type = importance_type
@@ -131,7 +131,7 @@ class OOF(object):
         if self.task == 'Regressor':
             self.oof_train_proba = np.zeros(len(X))
             self.oof_test_proba = np.zeros(len(X_test))
-            _ = enumerate(ShuffleSplit(cv, random_state=split_seed).split(X, y))  # todo: 兼容时间序列
+            _ = enumerate(KFold(cv, shuffle=True, random_state=split_seed).split(X, y))  # todo: 兼容时间序列
 
         elif self.task == 'Classifier':
             num_classes = len(set(y))
@@ -184,7 +184,7 @@ class OOF(object):
                     s = feval(y_valid, self.oof_train_proba[valid_index_])
                     valid_metrics.append(s)  # 回归
 
-        if self.oof_test_proba.shape[1] == 2:
+        if self.oof_test_proba.shape[-1] == 2:  # 二分类
             self.oof_train_proba = self.oof_train_proba[:, 1]
             self.oof_test_proba = self.oof_test_proba[:, 1]
 
@@ -223,13 +223,18 @@ class OOF(object):
             valid_index = list(set(target_index) & set(valid_index))
         return valid_index
 
-    def oof_result_save(self, oof_file):
+    def oof_result_save(self, oof_file='submit.csv'):
+        if self.oof_score:
+            file_type = oof_file.split('.')[-1]
+            oof_file = oof_file.replace(file_type, f"_{self.oof_score * 100:.4f}.file_type")
         pd.DataFrame({'oof': self.oof_train_test}).to_csv(oof_file, index=False)
 
-    def opt_cv(self, X, y, cv_choices=range(3, 16), **kwargs):
+    def opt_cv(self, X, y, feval, cv_choices=range(3, 16), **kwargs):
         scores = []
         for cv in cv_choices | xtqdm('opt cv🐢'):
             kwargs['cv'] = cv
+            kwargs['feval'] = feval
+
             score = self.fit(X, y, **kwargs)
 
             scores.append((score, cv))

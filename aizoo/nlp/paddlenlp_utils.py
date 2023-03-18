@@ -10,28 +10,12 @@
 
 
 from paddlenlp.taskflow.taskflow import Taskflow as _Taskflow, TASKS
-
+from paddle.io import DataLoader, BatchSampler, DistributedBatchSampler
+from paddlenlp.data import DataCollatorWithPadding
+from paddlenlp.datasets import load_dataset
+from paddlenlp.transformers import AutoModelForSequenceClassification, AutoTokenizer, LinearDecayWithWarmup
 # ME
 from meutils.pipe import *
-
-Taskflow = lru_cache()(_Taskflow)
-"""
-word_segmentation: fast/base/accurate
-"""
-
-def taskflow4batch(data, batch_size=64, taskflow=Taskflow('ner'), cache=None):
-    """
-
-    @param data: 批量数据
-    @param batch_size:
-    @param taskflow:
-    @param cache: 默认硬盘缓存
-    @return:
-    """
-    if isinstance(cache, str):
-        taskflow = disk_cache(location=cache)(taskflow.__call__)
-
-    return data | xgroup(batch_size) | xtqdm | xmap(taskflow) | xchain | xlist
 
 
 def text_correction_view(item):
@@ -48,5 +32,24 @@ def text_correction_view(item):
     return ''.join(l)
 
 
+def dataloader_from_dataframe(df, batch_size, max_seq_length, tokenizer, shuffle=True):
+    def _read(df):
+        yield from df.to_dict('r')
+
+    # line = next(_read(df))  # 判断label
+
+    ds = (
+        load_dataset(_read, lazy=False, df=df)
+            .map(lambda example: {
+            **tokenizer(**example, max_seq_len=max_seq_length),
+            **{'labels': np.array([example['label']], dtype='int64')}  # TODO: 有label
+        }) # batch['input_ids'], batch['token_type_ids'], batch['labels']
+    )
+    batch_sampler = BatchSampler(ds, batch_size=batch_size, shuffle=shuffle)
+    collate_fn = DataCollatorWithPadding(tokenizer)
+    return DataLoader(dataset=ds, batch_sampler=batch_sampler, collate_fn=collate_fn)
+
+
 if __name__ == '__main__':
-    taskflow4batch(['人生就是如此，经过磨练才能让自己更加拙壮，才能使自己更加乐观。'])
+    # taskflow4batch(['人生就是如此，经过磨练才能让自己更加拙壮，才能使自己更加乐观。'])
+    pass

@@ -9,8 +9,6 @@
 # @Description  :
 
 
-from itertools import combinations
-
 # ME
 from meutils.pipe import *
 
@@ -18,7 +16,7 @@ from meutils.pipe import *
 class FE(object):
 
     def __init__(self, cat_feats=None, num_feats=None, cat_funcs=None, num_funcs=None, agg_dict=None,
-                 cat_feat_combination=None):
+                 cat_feat_combination=None, r_range=(0, 2)):
         """
 
         @param cat_feats: cat_feats、num_feats同不为None
@@ -41,14 +39,15 @@ class FE(object):
 
         self.agg_dict = agg_dict if agg_dict is not None else {}
 
+        self.r_range = r_range
         self.cat_feat_combination = cat_feat_combination
 
-    def transform(self, df: pd.DataFrame, n_jobs=1, threshold=10000):
-        """提前计算一下特征值数量，过滤
+    def transform(self, df: pd.DataFrame, cat_threshold=1000):
+        """
 
-        @param df:
-        @param n_jobs:
-        @return:
+        :param df:
+        :param cat_threshold: 超过1000个类别就不参与特征生成
+        :return:
         """
 
         if self.cat_feats is None:
@@ -61,7 +60,7 @@ class FE(object):
 
         if self.cat_feat_combination is None:
             # self.cat_feat_combination = self.combination_all(self.cat_feats)
-            self.cat_feat_combination_df = self.calculate_featvalue_num(df, self.cat_feats, n_jobs, threshold)
+            self.cat_feat_combination_df = self.calculate_featvalue_num(df, self.cat_feats, threshold=cat_threshold)
             self.cat_feat_combination = self.cat_feat_combination_df['keys'].tolist()
 
             ##############################################################
@@ -70,39 +69,9 @@ class FE(object):
 
         bar = tqdm(self.cat_feat_combination, desc='agg🐢')
 
-        if n_jobs == 1:
-            for keys in bar:
-                df_ = self.group_calculate(df, keys)
-                df = df.merge(df_, 'left')  # df = df.merge(df_, on=keys)
-
-        else:  # 多进程加速
-            def func(keys):
-                return self.group_calculate(df, keys)
-
-            dfs = bar | xJobs(func, n_jobs) | xtqdm(desc=f'joining🐢')
-
-            for df_ in dfs:
-                df = df.merge(df_, 'left')  # todo: 并行设计
-
-            #############################无加速效果#################################
-            # def func(dfs):
-            #     dff = df.copy()
-            #     for df_ in dfs:
-            #         dff = dff.merge(df_)
-            #     return dff
-            #
-            # def dfs_join(l, func=func, n_jobs=n_jobs):
-            #     batch_size = len(l) // n_jobs
-            #
-            #     if batch_size == 1:
-            #         return func(l)
-            #
-            #     l = l | xgroup(batch_size) | xtqdm(desc=f'joining🐢bs={batch_size}') | xJobs(func, n_jobs)
-            #
-            #     return dfs_join(l)
-            #
-            # df = dfs_join(dfs)
-            ##############################################################
+        for keys in bar:
+            df_ = self.group_calculate(df, keys)
+            df = df.merge(df_, 'left')  # df = df.merge(df_, on=keys)
 
         return df
 
@@ -128,14 +97,13 @@ class FE(object):
 
         return {**cat_agg_dict, **num_agg_dict, **self.agg_dict}
 
-    @staticmethod
-    def combination_all(s):
+    def combination_all(self, s):
         comb_list = []
-        for i in range(1, len(s) + 1):
-            comb_list += map(list, combinations(s, i))
+        for i in range(*self.r_range):
+            comb_list += map(list, itertools.combinations(s, i + 1))
         return comb_list
 
-    def calculate_featvalue_num(self, df, cat_feats, n_jobs=6, threshold=10000):
+    def calculate_featvalue_num(self, df, cat_feats, n_jobs=6, threshold=1000):
         func = lambda keys: (df[keys].drop_duplicates().__len__(), len(keys), keys)
 
         _ = self.combination_all(cat_feats) | xtqdm(desc='计算特征值数🐢') | xJobs(func, n_jobs)
@@ -180,7 +148,7 @@ if __name__ == '__main__':
     df1 = pd.DataFrame({f"C{i}": np.random.randint(0, i + 3, size=100) for i in range(5)})
     df2 = pd.DataFrame(np.random.random((100, 5)), columns=(f"N{i}" for i in range(5)))
 
-    df = pd.concat([df1, df2], 1)
+    df = pd.concat([df1, df2], 1).reset_index()
 
     # ft = FE()
     # ft = FE(num_funcs=[])

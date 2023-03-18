@@ -25,7 +25,7 @@ client.wordEmbedding
 client.wordSimEmbedding
 """
 
-from aip import AipNlp, AipOcr
+from aip import AipNlp, AipOcr, AipKg
 
 keys = """
 15696121

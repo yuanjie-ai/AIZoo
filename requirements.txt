@@ -5,3 +5,4 @@ pandas_summary
 
 # torch
 # torchinfo
+# pip install setuptools_scm seqeval
